@@ -41,7 +41,7 @@ export default function ResultCard({ card, nights }) {
         </div>
 
         <div className="offers">
-          {card.offers.map(
+          {(card.offers || []).map(
             (o) =>
               o.total != null && (
                 <a

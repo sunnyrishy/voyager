@@ -16,6 +16,7 @@ export function useVoyagerAgent() {
   const conversationRef = useRef(null);
 
   const callSearchTool = useCallback(async (params) => {
+    console.log('[voyager] callSearchTool params:', params);
     try {
       const res = await fetch(`${BACKEND_URL}/tools/search_accommodations`, {
         method: 'POST',
@@ -23,6 +24,8 @@ export function useVoyagerAgent() {
         body: JSON.stringify({ ...params, sessionId: sessionIdRef.current }),
       });
       const data = await res.json();
+      console.log('[voyager] backend response:', data);
+      console.log('[voyager] cards count:', data.cards?.length, '| callouts count:', data.callouts?.length);
 
       setTurns((prev) => [
         ...prev.map((t) => ({ ...t, dimmed: true })),
@@ -36,6 +39,7 @@ export function useVoyagerAgent() {
       ]);
       return data; // returned to the agent as the tool result
     } catch (e) {
+      console.error('[voyager] callSearchTool error:', e);
       return {
         ok: false,
         error: {
@@ -79,13 +83,23 @@ export function useVoyagerAgent() {
             return result;
           },
         },
-        onConnect: () => setConnStatus('connected'),
+        onConnect: () => {
+          console.log('[voyager] session connected');
+          setConnStatus('connected');
+        },
         onDisconnect: () => {
+          console.log('[voyager] session disconnected');
           setConnStatus('off');
           setAgentStatus('idle');
         },
-        onError: (e) => setError(String(e?.message || e)),
-        onStatusChange: (s) => setAgentStatus(s),
+        onError: (e) => {
+          console.error('[voyager] SDK error:', e);
+          setError(String(e?.message || e));
+        },
+        onStatusChange: (s) => {
+          console.log('[voyager] status change:', s);
+          setAgentStatus(s);
+        },
         onMessage: (message) => {
           console.log('[voyager] onMessage', message);
           try {
