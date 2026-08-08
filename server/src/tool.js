@@ -49,6 +49,43 @@ function toStay22Params(input = {}) {
 }
 
 /**
+ * The voice agent's LLM is unreliable about knowing today's real date. Never
+ * trust the agent's year: if checkin is in the past relative to the server's
+ * real clock, roll BOTH checkin and checkout forward by the same number of
+ * years (same month/day, preserving trip length) so the search always lands
+ * on a valid future date regardless of what year the LLM assumed "today" was.
+ */
+function rollDatesToFuture(params) {
+  if (!params.checkin) return params;
+  const checkin = new Date(`${params.checkin}T00:00:00`);
+  if (Number.isNaN(checkin.getTime())) return params;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let yearsToAdd = 0;
+  const probe = new Date(checkin);
+  while (probe < today) {
+    probe.setFullYear(probe.getFullYear() + 1);
+    yearsToAdd++;
+  }
+  if (yearsToAdd === 0) return params;
+
+  const shift = (dateStr) => {
+    const d = new Date(`${dateStr}T00:00:00`);
+    if (Number.isNaN(d.getTime())) return dateStr;
+    d.setFullYear(d.getFullYear() + yearsToAdd);
+    return d.toISOString().slice(0, 10);
+  };
+
+  return {
+    ...params,
+    checkin: shift(params.checkin),
+    checkout: params.checkout ? shift(params.checkout) : params.checkout,
+  };
+}
+
+/**
  * The single tool the ElevenLabs agent calls.
  * Accepts params at top level, or wrapped as { parameters: {...} } / { input: {...} }
  * (so it also works if you switch to a webhook-style server tool later).
@@ -59,7 +96,7 @@ toolRouter.post('/tools/search_accommodations', async (req, res) => {
     const agentParams = body.parameters || body.input || body;
     const sessionId = String(body.sessionId || agentParams.sessionId || 'default');
 
-    const delta = toStay22Params(agentParams);
+    const delta = rollDatesToFuture(toStay22Params(agentParams));
     if (delta.pageSize === undefined) delta.pageSize = 8;
     delta.pageSize = Math.min(Number(delta.pageSize) || 8, 12);
 

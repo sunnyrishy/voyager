@@ -29,8 +29,12 @@ export class Stay22Error extends Error {
 function friendly(status) {
   switch (status) {
     case 400:
-      return new Stay22Error(400, 'Bad or missing location',
-        "I couldn't pin down that location — can you give me a city or neighborhood?");
+      // Don't assume it's the location — a 400 can just as easily mean a
+      // bad/invalid date or another malformed filter. Check the server
+      // console for the raw Stay22 response body (logged below) to see
+      // the actual reason.
+      return new Stay22Error(400, 'Bad request',
+        "That search didn't go through — could be the location, the dates, or another filter. Can you confirm the destination and check-in/check-out dates?");
     case 401:
       return new Stay22Error(401, 'Invalid API key',
         "I'm having a credentials hiccup with the hotel API — one moment.");
@@ -103,6 +107,16 @@ export async function searchAccommodations(params = {}) {
           reset: res.headers.get('X-RateLimit-Reset'),
         },
       };
+    }
+
+    // Log the raw Stay22 error body server-side (never spoken/shown to the
+    // user) so the *real* reason for a failure is visible in the terminal
+    // instead of having to guess from our own generic friendly() message.
+    try {
+      const bodyText = await res.text();
+      if (bodyText) console.error(`[stay22] ${res.status} response body:`, bodyText.slice(0, 500));
+    } catch {
+      /* diagnostic only, never let this mask the real error */
     }
 
     if ([429, 502, 504].includes(res.status) && attempt < 2) {
