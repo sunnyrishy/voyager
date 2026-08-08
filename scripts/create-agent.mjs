@@ -26,11 +26,24 @@ if (!key) {
 const headers = { 'xi-api-key': key, 'Content-Type': 'application/json' };
 
 async function api(method, path, body) {
-  const res = await fetch(`${API}${path}`, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(`${API}${path}`, {
+      method,
+      headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+  } catch (networkErr) {
+    // fetch() throws a bare "fetch failed" with the real reason tucked away
+    // in .cause (DNS failure, TLS error, connection refused/reset, timeout,
+    // proxy interference, etc.) — surface it instead of losing it.
+    const err = new Error(
+      `Network error calling ${method} ${path}: ${networkErr.message}` +
+        (networkErr.cause ? ` (cause: ${networkErr.cause.code || networkErr.cause.message || networkErr.cause})` : '')
+    );
+    err.cause = networkErr.cause;
+    throw err;
+  }
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
     const err = new Error(`${method} ${path} -> ${res.status}`);
