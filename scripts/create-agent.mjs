@@ -106,9 +106,9 @@ const TOOL_PARAMETERS = {
     },
     checkin: { type: 'string', description: 'Check-in date YYYY-MM-DD, today or later' },
     checkout: { type: 'string', description: 'Check-out date YYYY-MM-DD, after checkin' },
-    adults: { type: 'integer' },
-    children: { type: 'integer' },
-    rooms: { type: 'integer' },
+    adults: { type: 'integer', description: 'Number of adult guests (default 2 if unspecified)' },
+    children: { type: 'integer', description: 'Number of children, if any' },
+    rooms: { type: 'integer', description: 'Number of rooms needed (default 1 if unspecified)' },
     min_price_per_night: {
       type: 'number',
       description: 'Per-night USD floor. Only applied when both dates are set.',
@@ -117,8 +117,18 @@ const TOOL_PARAMETERS = {
       type: 'number',
       description: 'Per-night USD budget cap. Only applied when both dates are set.',
     },
-    min_star_rating: { type: 'integer', minimum: 0, maximum: 5 },
-    min_guest_rating: { type: 'number', minimum: 0, maximum: 10 },
+    min_star_rating: {
+      type: 'integer',
+      minimum: 0,
+      maximum: 5,
+      description: 'Minimum hotel star rating to include, 0-5',
+    },
+    min_guest_rating: {
+      type: 'number',
+      minimum: 0,
+      maximum: 10,
+      description: 'Minimum guest review score to include, 0-10',
+    },
     property_type: {
       type: 'string',
       description: 'hotel | rental | villa | hostel | resort | apartment ...',
